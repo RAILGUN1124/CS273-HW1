@@ -1,5 +1,5 @@
 """
-CS286-02 Assignment Project 1 - Data Preprocessing
+CS273 Assignment - Data Preprocessing
 
 This script performs the following:
 1. Load EmoSounds-3.csv and IADSED-2.csv datasets
