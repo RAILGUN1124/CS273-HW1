@@ -486,7 +486,7 @@ def save_preprocessed_data(df, dataset_name):
 def main():
     """Main execution function"""
     print("\n" + "=" * 80)
-    print(" " * 20 + "CS286-02 ASSIGNMENT PROJECT 1")
+    print(" " * 20 + "CS273 ASSIGNMENT PROJECT 1")
     print(" " * 25 + "DATA PREPROCESSING")
     print("=" * 80)
     
