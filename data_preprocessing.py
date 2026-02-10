@@ -145,12 +145,21 @@ def visualize_data(df, dataset_name):
     print(f"STEP 3: DATA VISUALIZATION - {dataset_name}")
     print(f"{'=' * 80}")
     
+    # Check if dominance exists to determine layout
+    has_dominance = 'dominance' in df.columns
+    
     # Create a figure with multiple subplots
-    fig = plt.figure(figsize=(16, 10))
+    if has_dominance:
+        fig = plt.figure(figsize=(18, 14))
+        rows, cols = 3, 3
+    else:
+        fig = plt.figure(figsize=(16, 10))
+        rows, cols = 2, 3
+    
     fig.suptitle(f'{dataset_name} - Data Analysis and Insights', fontsize=16, fontweight='bold')
     
     # Visualization 1: Distribution of emotional dimensions
-    ax1 = plt.subplot(2, 3, 1)
+    ax1 = plt.subplot(rows, cols, 1)
     if 'arousal' in df.columns and 'valence' in df.columns:
         # Detect scale type for threshold lines
         arousal_min = df['arousal'].min()
@@ -173,7 +182,7 @@ def visualize_data(df, dataset_name):
         ax1.axvline(x=valence_threshold, color='red', linestyle='--', linewidth=1, alpha=0.5)
     
     # Visualization 2: Missing values heatmap
-    ax2 = plt.subplot(2, 3, 2)
+    ax2 = plt.subplot(rows, cols, 2)
     numeric_cols = df.select_dtypes(include=[np.number]).columns[:20]  # First 20 numeric columns
     missing_data = df[numeric_cols].isnull().sum()
     if missing_data.sum() > 0:
@@ -188,7 +197,7 @@ def visualize_data(df, dataset_name):
     ax2.tick_params(axis='x', rotation=45)
     
     # Visualization 3: Distribution of key features
-    ax3 = plt.subplot(2, 3, 3)
+    ax3 = plt.subplot(rows, cols, 3)
     if 'arousal' in df.columns:
         ax3.hist(df['arousal'], bins=30, alpha=0.7, color='skyblue', edgecolor='black')
         ax3.set_xlabel('Arousal', fontsize=11, fontweight='bold')
@@ -197,10 +206,10 @@ def visualize_data(df, dataset_name):
         ax3.grid(True, alpha=0.3, axis='y')
     
     # Visualization 4: Correlation heatmap of top features
-    ax4 = plt.subplot(2, 3, 4)
+    ax4 = plt.subplot(rows, cols, 4)
     emotion_features = [col for col in ['arousal', 'valence', 'dominance'] if col in df.columns]
     acoustic_features = df.select_dtypes(include=[np.number]).columns[:7]
-    features_to_correlate = list(set(emotion_features) | set(acoustic_features))
+    features_to_correlate = sorted(list(set(emotion_features) | set(acoustic_features)))
     
     if len(features_to_correlate) > 1:
         corr_matrix = df[features_to_correlate].corr()
@@ -209,7 +218,7 @@ def visualize_data(df, dataset_name):
         ax4.set_title('Feature Correlation Matrix', fontsize=12, fontweight='bold')
     
     # Visualization 5: Valence distribution
-    ax5 = plt.subplot(2, 3, 5)
+    ax5 = plt.subplot(rows, cols, 5)
     if 'valence' in df.columns:
         ax5.hist(df['valence'], bins=30, alpha=0.7, color='lightcoral', edgecolor='black')
         ax5.set_xlabel('Valence', fontsize=11, fontweight='bold')
@@ -218,7 +227,7 @@ def visualize_data(df, dataset_name):
         ax5.grid(True, alpha=0.3, axis='y')
     
     # Visualization 6: Box plot of emotional dimensions
-    ax6 = plt.subplot(2, 3, 6)
+    ax6 = plt.subplot(rows, cols, 6)
     emotion_cols = [col for col in ['arousal', 'valence', 'dominance'] if col in df.columns]
     if emotion_cols:
         df[emotion_cols].boxplot(ax=ax6, patch_artist=True, 
@@ -227,6 +236,61 @@ def visualize_data(df, dataset_name):
         ax6.set_title('Emotional Dimensions - Box Plot', fontsize=12, fontweight='bold')
         ax6.set_ylabel('Value', fontsize=11, fontweight='bold')
         ax6.grid(True, alpha=0.3, axis='y')
+    
+    # Visualization 7: Dominance distribution (only if dominance exists)
+    if has_dominance:
+        ax7 = plt.subplot(rows, cols, 7)
+        ax7.hist(df['dominance'], bins=30, alpha=0.7, color='mediumseagreen', edgecolor='black')
+        ax7.set_xlabel('Dominance', fontsize=11, fontweight='bold')
+        ax7.set_ylabel('Frequency', fontsize=11, fontweight='bold')
+        ax7.set_title('Dominance Distribution', fontsize=12, fontweight='bold')
+        ax7.grid(True, alpha=0.3, axis='y')
+        
+        # Visualization 8: Dominance vs Arousal
+        ax8 = plt.subplot(rows, cols, 8)
+        if 'arousal' in df.columns:
+            # Detect scale type for threshold lines
+            dominance_min = df['dominance'].min()
+            arousal_min = df['arousal'].min()
+            
+            if dominance_min < 0 and arousal_min < 0:
+                dominance_threshold = 0
+                arousal_threshold = 0
+            else:
+                dominance_threshold = (df['dominance'].max() + df['dominance'].min()) / 2
+                arousal_threshold = (df['arousal'].max() + df['arousal'].min()) / 2
+            
+            ax8.scatter(df['dominance'], df['arousal'], alpha=0.5, c='mediumseagreen', edgecolors='black', linewidth=0.5)
+            ax8.set_xlabel('Dominance', fontsize=11, fontweight='bold')
+            ax8.set_ylabel('Arousal', fontsize=11, fontweight='bold')
+            ax8.set_title('Dominance-Arousal Distribution', fontsize=12, fontweight='bold')
+            ax8.grid(True, alpha=0.3)
+            # Draw threshold lines
+            ax8.axhline(y=arousal_threshold, color='red', linestyle='--', linewidth=1, alpha=0.5)
+            ax8.axvline(x=dominance_threshold, color='red', linestyle='--', linewidth=1, alpha=0.5)
+        
+        # Visualization 9: Dominance vs Valence
+        ax9 = plt.subplot(rows, cols, 9)
+        if 'valence' in df.columns:
+            # Detect scale type for threshold lines
+            dominance_min = df['dominance'].min()
+            valence_min = df['valence'].min()
+            
+            if dominance_min < 0 and valence_min < 0:
+                dominance_threshold = 0
+                valence_threshold = 0
+            else:
+                dominance_threshold = (df['dominance'].max() + df['dominance'].min()) / 2
+                valence_threshold = (df['valence'].max() + df['valence'].min()) / 2
+            
+            ax9.scatter(df['dominance'], df['valence'], alpha=0.5, c='mediumpurple', edgecolors='black', linewidth=0.5)
+            ax9.set_xlabel('Dominance', fontsize=11, fontweight='bold')
+            ax9.set_ylabel('Valence', fontsize=11, fontweight='bold')
+            ax9.set_title('Dominance-Valence Distribution', fontsize=12, fontweight='bold')
+            ax9.grid(True, alpha=0.3)
+            # Draw threshold lines
+            ax9.axhline(y=valence_threshold, color='red', linestyle='--', linewidth=1, alpha=0.5)
+            ax9.axvline(x=dominance_threshold, color='red', linestyle='--', linewidth=1, alpha=0.5)
     
     plt.tight_layout()
     
