@@ -408,6 +408,11 @@ def preprocess_data(df, dataset_name):
         arousal_orig = df[['arousal']].values.flatten()
         valence_orig = df[['valence']].values.flatten()
         
+        # Check if dominance exists
+        has_dominance = 'dominance' in df_preprocessed.columns
+        if has_dominance:
+            dominance_orig = df[['dominance']].values.flatten()
+        
         # Detect scale type: centered at 0 vs. positive range (Likert scale)
         arousal_min = arousal_orig.min()
         valence_min = valence_orig.min()
@@ -418,44 +423,87 @@ def preprocess_data(df, dataset_name):
             # Scale centered at 0 (e.g., [-1, 1])
             arousal_threshold = 0
             valence_threshold = 0
+            dominance_threshold = 0 if has_dominance else None
             scale_type = "bipolar (centered at 0)"
         else:
             # Likert scale (e.g., [1, 9]) - use midpoint
             arousal_threshold = (arousal_orig.max() + arousal_orig.min()) / 2
             valence_threshold = (valence_orig.max() + valence_orig.min()) / 2
-            scale_type = f"Likert (thresholds: A={arousal_threshold:.2f}, V={valence_threshold:.2f})"
+            if has_dominance:
+                dominance_threshold = (dominance_orig.max() + dominance_orig.min()) / 2
+                scale_type = f"Likert (thresholds: A={arousal_threshold:.2f}, V={valence_threshold:.2f}, D={dominance_threshold:.2f})"
+            else:
+                dominance_threshold = None
+                scale_type = f"Likert (thresholds: A={arousal_threshold:.2f}, V={valence_threshold:.2f})"
         
         print(f"Detected scale type: {scale_type}")
         
         # Calculate emotional intensity from original values
-        df_preprocessed['emotional_intensity'] = np.sqrt(
-            (arousal_orig - arousal_threshold)**2 + 
-            (valence_orig - valence_threshold)**2
-        )
-        print(f"Created 'emotional_intensity' feature")
+        if has_dominance:
+            df_preprocessed['emotional_intensity'] = np.sqrt(
+                (arousal_orig - arousal_threshold)**2 + 
+                (valence_orig - valence_threshold)**2 +
+                (dominance_orig - dominance_threshold)**2
+            )
+            print(f"Created 'emotional_intensity' feature (3D: arousal, valence, dominance)")
+        else:
+            df_preprocessed['emotional_intensity'] = np.sqrt(
+                (arousal_orig - arousal_threshold)**2 + 
+                (valence_orig - valence_threshold)**2
+            )
+            print(f"Created 'emotional_intensity' feature (2D: arousal, valence)")
         
-        # Emotional quadrant encoding using appropriate thresholds
+        # Emotional quadrant/octant encoding using appropriate thresholds
         df_preprocessed['emotional_quadrant'] = 0
-        df_preprocessed.loc[(arousal_orig > arousal_threshold) & (valence_orig > valence_threshold), 'emotional_quadrant'] = 1  # Excited
-        df_preprocessed.loc[(arousal_orig > arousal_threshold) & (valence_orig < valence_threshold), 'emotional_quadrant'] = 2  # Angry
-        df_preprocessed.loc[(arousal_orig < arousal_threshold) & (valence_orig < valence_threshold), 'emotional_quadrant'] = 3  # Sad
-        df_preprocessed.loc[(arousal_orig < arousal_threshold) & (valence_orig > valence_threshold), 'emotional_quadrant'] = 4  # Calm
         
-        # Count quadrant distribution
-        quadrant_counts = df_preprocessed['emotional_quadrant'].value_counts().sort_index()
-        print(f"Created 'emotional_quadrant' feature (1=Excited, 2=Angry, 3=Sad, 4=Calm)")
-        print(f"Quadrant distribution:")
+        if has_dominance:
+            # 3D space: 8 octants
+            df_preprocessed.loc[(arousal_orig > arousal_threshold) & (valence_orig > valence_threshold) & (dominance_orig > dominance_threshold), 'emotional_quadrant'] = 1  # Empowered
+            df_preprocessed.loc[(arousal_orig > arousal_threshold) & (valence_orig > valence_threshold) & (dominance_orig < dominance_threshold), 'emotional_quadrant'] = 2  # Elated
+            df_preprocessed.loc[(arousal_orig > arousal_threshold) & (valence_orig < valence_threshold) & (dominance_orig > dominance_threshold), 'emotional_quadrant'] = 3  # Aggressive
+            df_preprocessed.loc[(arousal_orig > arousal_threshold) & (valence_orig < valence_threshold) & (dominance_orig < dominance_threshold), 'emotional_quadrant'] = 4  # Anxious
+            df_preprocessed.loc[(arousal_orig < arousal_threshold) & (valence_orig < valence_threshold) & (dominance_orig > dominance_threshold), 'emotional_quadrant'] = 5  # Resigned
+            df_preprocessed.loc[(arousal_orig < arousal_threshold) & (valence_orig < valence_threshold) & (dominance_orig < dominance_threshold), 'emotional_quadrant'] = 6  # Depressed
+            df_preprocessed.loc[(arousal_orig < arousal_threshold) & (valence_orig > valence_threshold) & (dominance_orig > dominance_threshold), 'emotional_quadrant'] = 7  # Content
+            df_preprocessed.loc[(arousal_orig < arousal_threshold) & (valence_orig > valence_threshold) & (dominance_orig < dominance_threshold), 'emotional_quadrant'] = 8  # Relaxed
+
+            
+            # Count octant distribution
+            quadrant_counts = df_preprocessed['emotional_quadrant'].value_counts().sort_index()
+            print(f"Created 'emotional_quadrant' feature with 8 octants (3D space):")
+            octant_labels = {
+                0: "Neutral, Balanced, Unengaged",
+                1: "Empowered, Energetic, Confident (high A, pos V, high D)",
+                2: "Joyful, Excited, Playful (high A, pos V, low D)",
+                3: "Angry, Aggressive, Defiant (high A, neg V, high D)",
+                4: "Anxious, Overwhelmed, Tense (high A, neg V, low D)",
+                5: "Melancholic, Stoic, Withdrawn (low A, neg V, high D)",
+                6: "Depressed, Hopeless, Disengaged (low A, neg V, low D)",
+                7: "Content, Calm, Secure (low A, pos V, high D)",
+                8: "Relaxed, Peaceful, Composed (low A, pos V, low D)"
+            }
+        else:
+            # 2D space: 4 quadrants
+            df_preprocessed.loc[(arousal_orig > arousal_threshold) & (valence_orig > valence_threshold), 'emotional_quadrant'] = 1  # Excited
+            df_preprocessed.loc[(arousal_orig > arousal_threshold) & (valence_orig < valence_threshold), 'emotional_quadrant'] = 2  # Angry
+            df_preprocessed.loc[(arousal_orig < arousal_threshold) & (valence_orig < valence_threshold), 'emotional_quadrant'] = 3  # Sad
+            df_preprocessed.loc[(arousal_orig < arousal_threshold) & (valence_orig > valence_threshold), 'emotional_quadrant'] = 4  # Calm
+            
+            # Count quadrant distribution
+            quadrant_counts = df_preprocessed['emotional_quadrant'].value_counts().sort_index()
+            print(f"Created 'emotional_quadrant' feature with 4 quadrants (2D space):")
+            octant_labels = {
+                0: "Neutral",
+                1: "Excited (high arousal, pos valence)",
+                2: "Angry/Tense (high arousal, neg valence)",
+                3: "Sad/Bored (low arousal, neg valence)",
+                4: "Calm/Relaxed (low arousal, pos valence)"
+            }
+        
+        print(f"Distribution:")
         for quad, count in quadrant_counts.items():
-            if quad == 0:
-                print(f"     - Neutral: {count} samples")
-            elif quad == 1:
-                print(f"     - Excited: {count} samples")
-            elif quad == 2:
-                print(f"     - Angry: {count} samples")
-            elif quad == 3:
-                print(f"     - Sad: {count} samples")
-            elif quad == 4:
-                print(f"     - Calm: {count} samples")
+            label = octant_labels.get(quad, f"Unknown ({quad})")
+            print(f"     - {label}: {count} samples")
     
     # Summary statistics
     print(f"\n4. PREPROCESSING SUMMARY:")
