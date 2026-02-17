@@ -64,14 +64,21 @@ def clean_data(df, dataset_name):
     print(f"STEP 2: DATA CLEANING - {dataset_name}")
     print(f"{'=' * 80}")
     
-    # Check for missing values
+    # Create a copy for cleaning
+    df = df.copy()
+    
+    # Replace string representations of NaN with actual NaN
+    nan_strings = ['nan', 'NaN', 'NAN', 'N/A', 'n/a', 'NA', 'na', 'null', 'NULL', 'None', '']
+    df.replace(nan_strings, np.nan, inplace=True)
+    
+    # Check for missing values (including NaN)
     print(f"\nMissing values before cleaning:")
     missing_before = df.isnull().sum()
     missing_count = missing_before[missing_before > 0]
     
     if len(missing_count) > 0:
         print(missing_count)
-        print(f"\nTotal missing values: {df.isnull().sum().sum()}")
+        print(f"\nTotal missing values (including NaN): {df.isnull().sum().sum()}")
     else:
         print("No missing values found!")
     
@@ -145,8 +152,13 @@ def visualize_data(df, dataset_name):
     print(f"STEP 3: DATA VISUALIZATION - {dataset_name}")
     print(f"{'=' * 80}")
     
+    # Create a copy and replace string NaN values for accurate missing value detection
+    df_viz = df.copy()
+    nan_strings = ['nan', 'NaN', 'NAN', 'N/A', 'n/a', 'NA', 'na', 'null', 'NULL', 'None', '']
+    df_viz.replace(nan_strings, np.nan, inplace=True)
+    
     # Check if dominance exists to determine layout
-    has_dominance = 'dominance' in df.columns
+    has_dominance = 'dominance' in df_viz.columns
     
     # Create a figure with multiple subplots
     if has_dominance:
@@ -183,7 +195,7 @@ def visualize_data(df, dataset_name):
     
     # Visualization 2: Missing values heatmap
     ax2 = plt.subplot(rows, cols, 2)
-    numeric_cols = df.select_dtypes(include=[np.number]).columns[:20]  # First 20 numeric columns
+    numeric_cols = df.select_dtypes(include=[np.number]).columns[:79]  # First 20 numeric columns
     missing_data = df[numeric_cols].isnull().sum()
     if missing_data.sum() > 0:
         missing_data[missing_data > 0].plot(kind='bar', ax=ax2, color='coral')
@@ -546,8 +558,8 @@ def main():
     print(" " * 25 + "PROCESSING EMOSOUNDS DATASET")
     print("#" * 80)
     
+    visualize_data(emosounds_df, "EmoSounds-3")
     emosounds_cleaned = clean_data(emosounds_df, "EmoSounds-3")
-    visualize_data(emosounds_cleaned, "EmoSounds-3")
     emosounds_preprocessed = preprocess_data(emosounds_cleaned, "EmoSounds-3")
     emo_output = save_preprocessed_data(emosounds_preprocessed, "EmoSounds-3")
     
@@ -556,8 +568,8 @@ def main():
     print(" " * 25 + "PROCESSING IADSED DATASET")
     print("#" * 80)
     
+    visualize_data(iadsed_df, "IADSED-2")
     iadsed_cleaned = clean_data(iadsed_df, "IADSED-2")
-    visualize_data(iadsed_cleaned, "IADSED-2")
     iadsed_preprocessed = preprocess_data(iadsed_cleaned, "IADSED-2")
     iadsed_output = save_preprocessed_data(iadsed_preprocessed, "IADSED-2")
     
