@@ -8,9 +8,14 @@ from sklearn.feature_selection import SelectKBest, f_regression
 import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings
+import sys
+import os
 warnings.filterwarnings('ignore')
 
-from ridge_regression_analysis import (
+# Add parent directory to path to import from Ridge module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from Ridge.ridge_regression_analysis import (
     split_data,
     evaluate_on_test,
 )
@@ -593,8 +598,8 @@ def main():
     print("="*80)
 
     datasets = [
-        ('emosounds-3_preprocessed.csv', 'EmoSounds-3'),
-        ('iadsed-2_preprocessed.csv', 'IADSED-2'),
+        ('../Data/emosounds-3_preprocessed.csv', 'EmoSounds-3'),
+        ('../Data/iadsed-2_preprocessed.csv', 'IADSED-2')
     ]
     k_features = 34
     fs_method = 'importance'

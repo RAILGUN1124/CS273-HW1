@@ -612,8 +612,8 @@ def main():
     
     # Define datasets
     datasets = [
-        ('emosounds-3_preprocessed.csv', 'EmoSounds-3'),
-        ('iadsed-2_preprocessed.csv', 'IADSED-2')
+        ('../Data/emosounds-3_preprocessed.csv', 'EmoSounds-3'),
+        ('../Data/iadsed-2_preprocessed.csv', 'IADSED-2')
     ]
     
     # Define targets to predict
